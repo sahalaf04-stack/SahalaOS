@@ -1,7 +1,12 @@
 #define VIDEO_MEMORY 0xB8000
 
-static int row = 4;
-static int col = 10;
+#define WHITE 0x07
+#define GREEN 0x0A
+#define CYAN  0x0B
+#define RED   0x0C
+
+static int row = 5;
+static int col = 0;
 
 static inline unsigned char inb(unsigned short port)
 {
@@ -16,13 +21,13 @@ static inline unsigned char inb(unsigned short port)
     return value;
 }
 
-void put_char(char c, int r, int cpos)
+void put_char(char c, int r, int cpos, unsigned char color)
 {
     char *video = (char *)VIDEO_MEMORY;
     int index = (r * 80 + cpos) * 2;
 
     video[index] = c;
-    video[index + 1] = 0x07;
+    video[index + 1] = color;
 }
 
 void clear_screen()
@@ -32,15 +37,15 @@ void clear_screen()
     for (int i = 0; i < 80 * 25; i++)
     {
         video[i * 2] = ' ';
-        video[i * 2 + 1] = 0x07;
+        video[i * 2 + 1] = WHITE;
     }
 }
 
-void print(const char *text, int r, int cpos)
+void print(const char *text, int r, int cpos, unsigned char color)
 {
-    while (*text)
+    while (*text && cpos < 80)
     {
-        put_char(*text, r, cpos);
+        put_char(*text, r, cpos, color);
         text++;
         cpos++;
     }
@@ -108,44 +113,79 @@ char scancode_to_char(unsigned char code)
     }
 }
 
+void print_prompt()
+{
+    print("SahalaOS:~$ ", row, 0, GREEN);
+    col = 12;
+}
+
 void execute_command(char *command)
 {
     row++;
 
     if (equal(command, "help"))
     {
-        print("Commands:", row, 0);
+        print("Available commands:", row, 0, CYAN);
         row++;
 
-        print("help  - Show commands", row, 0);
+        print("help     - Show this help", row, 2, WHITE);
         row++;
 
-        print("clear - Clear screen", row, 0);
+        print("about    - About SahalaOS", row, 2, WHITE);
         row++;
 
-        print("info  - OS information", row, 0);
+        print("version  - Show OS version", row, 2, WHITE);
+        row++;
+
+        print("echo     - Print text", row, 2, WHITE);
+        row++;
+
+        print("clear    - Clear screen", row, 2, WHITE);
+        row++;
     }
-    else if (equal(command, "info"))
+    else if (equal(command, "about"))
     {
-        print("SahalaOS v0.1", row, 0);
+        print("SahalaOS is a custom operating system", row, 0, CYAN);
         row++;
 
-        print("32-bit x86 Educational OS", row, 0);
+        print("built from scratch using C and Assembly.", row, 0, WHITE);
+    }
+    else if (equal(command, "version"))
+    {
+        print("SahalaOS v0.2", row, 0, GREEN);
+        row++;
+
+        print("Architecture: x86 32-bit", row, 0, WHITE);
+    }
+    else if (command[0] == 'e' &&
+             command[1] == 'c' &&
+             command[2] == 'h' &&
+             command[3] == 'o' &&
+             command[4] == ' ')
+    {
+        print(command + 5, row, 0, WHITE);
     }
     else if (equal(command, "clear"))
     {
         clear_screen();
+
         row = 0;
 
-        print("Welcome to SahalaOS!", row, 0);
+        print("========================================", row, 0, CYAN);
         row++;
 
-        print("Type help for commands.", row, 0);
+        print("           SAHALA OS v0.2", row, 0, GREEN);
+        row++;
+
+        print("========================================", row, 0, CYAN);
+        row += 2;
+
+        print("Welcome to SahalaOS!", row, 0, WHITE);
         row += 2;
     }
-    else if (*command)
+    else if (command[0] != '\0')
     {
-        print("Unknown command.", row, 0);
+        print("Command not found. Type 'help'.", row, 0, RED);
     }
 }
 
@@ -156,32 +196,27 @@ void kernel_main()
 
     clear_screen();
 
-    print("Welcome to SahalaOS!", 0, 0);
-    print("Keyboard polling driver", 1, 0);
-    print("Type help and press Enter.", 2, 0);
+    print("========================================", 0, 0, CYAN);
+    print("           SAHALA OS v0.2", 1, 0, GREEN);
+    print("========================================", 2, 0, CYAN);
 
-    print("SahalaOS> ", 4, 0);
+    print("Welcome to SahalaOS!", 4, 0, WHITE);
+    print("Type 'help' to see available commands.", 5, 0, WHITE);
+
+    row = 7;
+    print_prompt();
 
     while (1)
     {
-        /*
-         * Wait until keyboard data is available.
-         */
         while ((inb(0x64) & 1) == 0)
         {
         }
 
         unsigned char code = inb(0x60);
 
-        /*
-         * Ignore key release.
-         */
         if (code & 0x80)
             continue;
 
-        /*
-         * Enter.
-         */
         if (code == 0x1C)
         {
             command[length] = '\0';
@@ -192,16 +227,17 @@ void kernel_main()
 
             row++;
 
-            print("SahalaOS> ", row, 0);
+            if (row >= 24)
+            {
+                clear_screen();
+                row = 0;
+            }
 
-            col = 10;
+            print_prompt();
 
             continue;
         }
 
-        /*
-         * Backspace.
-         */
         if (code == 0x0E)
         {
             if (length > 0)
@@ -209,7 +245,7 @@ void kernel_main()
                 length--;
                 col--;
 
-                put_char(' ', row, col);
+                put_char(' ', row, col, WHITE);
             }
 
             continue;
@@ -222,14 +258,14 @@ void kernel_main()
             command[length] = c;
             length++;
 
-            put_char(c, row, col);
+            put_char(c, row, col, WHITE);
 
             col++;
 
             if (col >= 79)
             {
                 row++;
-                col = 10;
+                col = 0;
             }
         }
     }
