@@ -119,6 +119,30 @@ void print_prompt()
     col = 12;
 }
 
+void reboot()
+{
+    unsigned char good;
+
+    do
+    {
+        good = inb(0x64);
+    }
+    while (good & 0x02);
+
+    __asm__ volatile (
+        "movb $0xFE, %%al\n"
+        "outb %%al, $0x64\n"
+        :
+        :
+        : "al"
+    );
+
+    while (1)
+    {
+        __asm__ volatile ("hlt");
+    }
+}
+
 void execute_command(char *command)
 {
     row++;
@@ -142,6 +166,8 @@ void execute_command(char *command)
 
         print("clear    - Clear screen", row, 2, WHITE);
         row++;
+        print("reboot   - Restart the OS", row, 2, WHITE);
+        row++;
     }
     else if (equal(command, "about"))
     {
@@ -164,6 +190,11 @@ void execute_command(char *command)
              command[4] == ' ')
     {
         print(command + 5, row, 0, WHITE);
+    }
+    else if (equal(command, "reboot"))
+    {
+        print("Rebooting SahalaOS...", row, 0, RED);
+        reboot();
     }
     else if (equal(command, "clear"))
     {
