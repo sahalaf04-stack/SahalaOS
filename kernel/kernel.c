@@ -283,6 +283,74 @@ void execute_command(char *command)
         row++;
     }
 
+    else if (equal(command, "date"))
+    {
+        unsigned char second, minute, hour;
+        unsigned char day, month;
+        unsigned short year;
+
+        rtc_get_time(
+            &second,
+            &minute,
+            &hour,
+            &day,
+            &month,
+            &year
+        );
+
+        print("Date: ", row, 0, CYAN);
+
+        int pos = 6;
+
+        put_char('0' + (day / 10), row, pos++, WHITE);
+        put_char('0' + (day % 10), row, pos++, WHITE);
+        put_char('/', row, pos++, WHITE);
+
+        put_char('0' + (month / 10), row, pos++, WHITE);
+        put_char('0' + (month % 10), row, pos++, WHITE);
+        put_char('/', row, pos++, WHITE);
+
+        put_char('0' + ((year / 1000) % 10), row, pos++, WHITE);
+        put_char('0' + ((year / 100) % 10), row, pos++, WHITE);
+        put_char('0' + ((year / 10) % 10), row, pos++, WHITE);
+        put_char('0' + (year % 10), row, pos++, WHITE);
+
+        row++;
+    }
+
+    else if (equal(command, "clock"))
+    {
+        unsigned char second, minute, hour;
+        unsigned char day, month;
+        unsigned short year;
+
+        rtc_get_time(
+            &second,
+            &minute,
+            &hour,
+            &day,
+            &month,
+            &year
+        );
+
+        print("Time: ", row, 0, CYAN);
+
+        int pos = 6;
+
+        put_char('0' + (hour / 10), row, pos++, WHITE);
+        put_char('0' + (hour % 10), row, pos++, WHITE);
+        put_char(':', row, pos++, WHITE);
+
+        put_char('0' + (minute / 10), row, pos++, WHITE);
+        put_char('0' + (minute % 10), row, pos++, WHITE);
+        put_char(':', row, pos++, WHITE);
+
+        put_char('0' + (second / 10), row, pos++, WHITE);
+        put_char('0' + (second % 10), row, pos++, WHITE);
+
+        row++;
+    }
+
     else if (equal(command, "reboot"))
     {
         print("Rebooting SahalaOS...", row, 0, RED);
