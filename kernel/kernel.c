@@ -236,6 +236,7 @@ void execute_command(char *command)
         print("touch    - Create an empty file", row, 2, WHITE);
         row++;
         print("pwd      - Show current directory", row, 2, WHITE);
+        print("cd       - Change directory", row, 2, WHITE); row++;
         row++;
         print("cd       - Change directory", row, 2, WHITE);
         row++;

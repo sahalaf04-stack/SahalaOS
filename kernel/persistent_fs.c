@@ -1,5 +1,5 @@
 #define FS_MAGIC 0x534F5346
-#define FS_VERSION 2
+#define FS_VERSION 3
 
 #define FS_SECTOR 10
 
@@ -14,6 +14,7 @@ struct DiskFile
 {
     char name[MAX_FILENAME];
     char content[MAX_CONTENT];
+    char parent[MAX_FILENAME];
     unsigned char used;
     unsigned char type;
 };
@@ -26,6 +27,8 @@ struct FileSystem
 };
 
 static struct FileSystem fs;
+
+static char current_directory[64] = "/";
 
 extern int ata_read_sector(unsigned int lba, unsigned char *buffer);
 extern int ata_write_sector(unsigned int lba, const unsigned char *buffer);
@@ -84,6 +87,7 @@ static void clear_fs()
         fs.files[i].type = 0;
         fs.files[i].name[0] = '\0';
         fs.files[i].content[0] = '\0';
+        fs.files[i].parent[0] = '\0';
     }
 }
 
@@ -129,8 +133,11 @@ static int fs_load()
             return -1;
         }
 
-        for (j = 0; j < 512 && offset + j < sizeof(fs); j++)
-            ((unsigned char *)&fs)[offset + j] = buffer[j];
+        for (j = 0; j < 512; j++)
+        {
+            if (offset + j < sizeof(fs))
+                ((unsigned char *)&fs)[offset + j] = buffer[j];
+        }
     }
 
     if (fs.magic != FS_MAGIC ||
@@ -146,18 +153,35 @@ static int fs_load()
 void pfs_init()
 {
     fs_load();
+    current_directory[0] = '/';
+    current_directory[1] = '\0';
 }
 
-int pfs_create_file(const char *name)
+static int find_file(const char *name, int type)
 {
     int i;
 
     for (i = 0; i < MAX_FILES; i++)
     {
         if (fs.files[i].used &&
-            str_equal(fs.files[i].name, name))
-            return -1;
+            fs.files[i].type == type &&
+            str_equal(fs.files[i].name, name) &&
+            str_equal(fs.files[i].parent, current_directory))
+        {
+            return i;
+        }
     }
+
+    return -1;
+}
+
+int pfs_create_file(const char *name)
+{
+    int i;
+
+    if (find_file(name, TYPE_FILE) >= 0 ||
+        find_file(name, TYPE_DIR) >= 0)
+        return -1;
 
     for (i = 0; i < MAX_FILES; i++)
     {
@@ -167,6 +191,8 @@ int pfs_create_file(const char *name)
             fs.files[i].type = TYPE_FILE;
 
             str_copy(fs.files[i].name, name);
+            str_copy(fs.files[i].parent, current_directory);
+
             fs.files[i].content[0] = '\0';
 
             return fs_save();
@@ -180,12 +206,9 @@ int pfs_create_dir(const char *name)
 {
     int i;
 
-    for (i = 0; i < MAX_FILES; i++)
-    {
-        if (fs.files[i].used &&
-            str_equal(fs.files[i].name, name))
-            return -1;
-    }
+    if (find_file(name, TYPE_FILE) >= 0 ||
+        find_file(name, TYPE_DIR) >= 0)
+        return -1;
 
     for (i = 0; i < MAX_FILES; i++)
     {
@@ -195,6 +218,8 @@ int pfs_create_dir(const char *name)
             fs.files[i].type = TYPE_DIR;
 
             str_copy(fs.files[i].name, name);
+            str_copy(fs.files[i].parent, current_directory);
+
             fs.files[i].content[0] = '\0';
 
             return fs_save();
@@ -206,34 +231,22 @@ int pfs_create_dir(const char *name)
 
 const char *pfs_read(const char *name)
 {
-    int i;
+    int i = find_file(name, TYPE_FILE);
 
-    for (i = 0; i < MAX_FILES; i++)
-    {
-        if (fs.files[i].used &&
-            fs.files[i].type == TYPE_FILE &&
-            str_equal(fs.files[i].name, name))
-        {
-            return fs.files[i].content;
-        }
-    }
+    if (i >= 0)
+        return fs.files[i].content;
 
     return 0;
 }
 
 int pfs_write(const char *name, const char *content)
 {
-    int i;
+    int i = find_file(name, TYPE_FILE);
 
-    for (i = 0; i < MAX_FILES; i++)
+    if (i >= 0)
     {
-        if (fs.files[i].used &&
-            fs.files[i].type == TYPE_FILE &&
-            str_equal(fs.files[i].name, name))
-        {
-            content_copy(fs.files[i].content, content);
-            return fs_save();
-        }
+        content_copy(fs.files[i].content, content);
+        return fs_save();
     }
 
     if (pfs_create_file(name) == 0)
@@ -246,18 +259,20 @@ int pfs_delete(const char *name)
 {
     int i;
 
-    for (i = 0; i < MAX_FILES; i++)
-    {
-        if (fs.files[i].used &&
-            str_equal(fs.files[i].name, name))
-        {
-            fs.files[i].used = 0;
-            fs.files[i].type = 0;
-            fs.files[i].name[0] = '\0';
-            fs.files[i].content[0] = '\0';
+    i = find_file(name, TYPE_FILE);
 
-            return fs_save();
-        }
+    if (i < 0)
+        i = find_file(name, TYPE_DIR);
+
+    if (i >= 0)
+    {
+        fs.files[i].used = 0;
+        fs.files[i].type = 0;
+        fs.files[i].name[0] = '\0';
+        fs.files[i].content[0] = '\0';
+        fs.files[i].parent[0] = '\0';
+
+        return fs_save();
     }
 
     return -1;
@@ -269,13 +284,13 @@ void pfs_list(void (*callback)(const char *, int))
 
     for (i = 0; i < MAX_FILES; i++)
     {
-        if (fs.files[i].used)
+        if (fs.files[i].used &&
+            str_equal(fs.files[i].parent, current_directory))
+        {
             callback(fs.files[i].name, fs.files[i].type);
+        }
     }
 }
-
-
-static char current_directory[64] = "/";
 
 const char *pfs_pwd()
 {
@@ -285,6 +300,9 @@ const char *pfs_pwd()
 int pfs_cd(const char *name)
 {
     int i;
+    char new_path[64];
+    int len;
+    int j;
 
     if (str_equal(name, "/"))
     {
@@ -295,21 +313,27 @@ int pfs_cd(const char *name)
 
     if (str_equal(name, ".."))
     {
-        int len = 0;
+        len = 0;
 
         while (current_directory[len] != '\0')
             len++;
 
-        while (len > 1 && current_directory[len - 1] != '/')
+        if (len <= 1)
+            return 0;
+
+        len--;
+
+        while (len > 0 && current_directory[len] != '/')
             len--;
 
-        if (len > 1)
-            current_directory[len - 1] = '\0';
-
-        if (current_directory[0] == '\0')
+        if (len == 0)
         {
             current_directory[0] = '/';
             current_directory[1] = '\0';
+        }
+        else
+        {
+            current_directory[len] = '\0';
         }
 
         return 0;
@@ -319,19 +343,35 @@ int pfs_cd(const char *name)
     {
         if (fs.files[i].used &&
             fs.files[i].type == TYPE_DIR &&
-            str_equal(fs.files[i].name, name))
+            str_equal(fs.files[i].name, name) &&
+            str_equal(fs.files[i].parent, current_directory))
         {
-            int len = 0;
+            len = 0;
 
             while (current_directory[len] != '\0')
                 len++;
 
-            if (len > 1)
+            if (len == 1 && current_directory[0] == '/')
             {
-                current_directory[len++] = '/';
+                new_path[0] = '/';
+                len = 1;
+            }
+            else
+            {
+                new_path[len++] = '/';
             }
 
-            str_copy(current_directory + len, name);
+            j = 0;
+
+            while (name[j] != '\0' &&
+                   len < 63)
+            {
+                new_path[len++] = name[j++];
+            }
+
+            new_path[len] = '\0';
+
+            str_copy(current_directory, new_path);
 
             return 0;
         }
