@@ -215,6 +215,8 @@ void execute_command(char *command)
 
         print("delete   - Delete a file", row, 2, WHITE);
         row++;
+        print("touch    - Create an empty file", row, 2, WHITE);
+        row++;
 
         print("disktest - Test disk read/write", row, 2, WHITE);
         row++;
@@ -548,6 +550,31 @@ void execute_command(char *command)
                 row += 3;
             }
         }
+    }
+
+    else if (command[0] == 't' &&
+             command[1] == 'o' &&
+             command[2] == 'u' &&
+             command[3] == 'c' &&
+             command[4] == 'h' &&
+             command[5] == ' ')
+    {
+        char *name = command + 6;
+
+        if (*name == '\0')
+        {
+            print("Usage: touch filename", row, 0, RED);
+        }
+        else if (pfs_create_file(name) == 0)
+        {
+            print("File created.", row, 0, GREEN);
+        }
+        else
+        {
+            print("Could not create file.", row, 0, RED);
+        }
+
+        row++;
     }
 
     else if (equal(command, "reboot"))
