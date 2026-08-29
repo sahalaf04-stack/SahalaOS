@@ -16,6 +16,13 @@ extern void rtc_get_time(unsigned char *, unsigned char *, unsigned char *, unsi
 extern void fs_init();
 extern void gdt_init();
 extern unsigned int timer_get_ticks();
+
+extern void memory_init();
+extern void *kmalloc(unsigned int);
+extern void kfree(void *);
+extern unsigned int memory_used();
+extern unsigned int memory_free();
+
 #define VIDEO_MEMORY 0xB8000
 
 #define WHITE 0x07
@@ -680,13 +687,66 @@ void execute_command(char *command)
 
     else if (equal(command, "mem"))
     {
+        unsigned int used = memory_used();
+        unsigned int free_mem = memory_free();
+
         print("Memory:", row, 0, CYAN);
         row++;
 
-        print("Kernel memory manager: basic", row, 2, WHITE);
+        print("Heap size: 65536 bytes", row, 2, WHITE);
         row++;
 
-        print("Heap allocator: not implemented", row, 2, WHITE);
+        print("Used: ", row, 2, WHITE);
+
+        char text[12];
+        int len = 0;
+        unsigned int temp = used;
+
+        if (temp == 0)
+        {
+            text[len++] = '0';
+        }
+        else
+        {
+            while (temp > 0 && len < 11)
+            {
+                text[len++] = '0' + (temp % 10);
+                temp /= 10;
+            }
+        }
+
+        int pos = 8;
+
+        while (len > 0)
+            put_char(text[--len], row, pos++, WHITE);
+
+        print(" bytes", row, pos, WHITE);
+        row++;
+
+        print("Free: ", row, 2, WHITE);
+
+        len = 0;
+        temp = free_mem;
+
+        if (temp == 0)
+        {
+            text[len++] = '0';
+        }
+        else
+        {
+            while (temp > 0 && len < 11)
+            {
+                text[len++] = '0' + (temp % 10);
+                temp /= 10;
+            }
+        }
+
+        pos = 8;
+
+        while (len > 0)
+            put_char(text[--len], row, pos++, WHITE);
+
+        print(" bytes", row, pos, WHITE);
         row++;
     }
 
@@ -738,6 +798,7 @@ void kernel_main()
 
     timer_init();
     gdt_init();
+    memory_init();
     interrupts_init();
     pfs_init();
     clear_screen();
