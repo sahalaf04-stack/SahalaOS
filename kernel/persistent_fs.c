@@ -273,3 +273,69 @@ void pfs_list(void (*callback)(const char *, int))
             callback(fs.files[i].name, fs.files[i].type);
     }
 }
+
+
+static char current_directory[64] = "/";
+
+const char *pfs_pwd()
+{
+    return current_directory;
+}
+
+int pfs_cd(const char *name)
+{
+    int i;
+
+    if (str_equal(name, "/"))
+    {
+        current_directory[0] = '/';
+        current_directory[1] = '\0';
+        return 0;
+    }
+
+    if (str_equal(name, ".."))
+    {
+        int len = 0;
+
+        while (current_directory[len] != '\0')
+            len++;
+
+        while (len > 1 && current_directory[len - 1] != '/')
+            len--;
+
+        if (len > 1)
+            current_directory[len - 1] = '\0';
+
+        if (current_directory[0] == '\0')
+        {
+            current_directory[0] = '/';
+            current_directory[1] = '\0';
+        }
+
+        return 0;
+    }
+
+    for (i = 0; i < MAX_FILES; i++)
+    {
+        if (fs.files[i].used &&
+            fs.files[i].type == TYPE_DIR &&
+            str_equal(fs.files[i].name, name))
+        {
+            int len = 0;
+
+            while (current_directory[len] != '\0')
+                len++;
+
+            if (len > 1)
+            {
+                current_directory[len++] = '/';
+            }
+
+            str_copy(current_directory + len, name);
+
+            return 0;
+        }
+    }
+
+    return -1;
+}

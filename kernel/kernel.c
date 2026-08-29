@@ -1,4 +1,8 @@
 extern void pfs_init();
+extern const char *pfs_pwd();
+extern int pfs_cd(const char *);
+extern int pfs_create_dir(const char *);
+extern int pfs_create_file(const char *);
 extern int pfs_create(const char *);
 extern const char *pfs_read(const char *);
 extern int pfs_write(const char *, const char *);
@@ -217,6 +221,10 @@ void execute_command(char *command)
         row++;
         print("touch    - Create an empty file", row, 2, WHITE);
         row++;
+        print("pwd      - Show current directory", row, 2, WHITE);
+        row++;
+        print("cd       - Change directory", row, 2, WHITE);
+        row++;
 
         print("disktest - Test disk read/write", row, 2, WHITE);
         row++;
@@ -398,6 +406,27 @@ void execute_command(char *command)
         put_char('0' + (second / 10), row, pos++, WHITE);
         put_char('0' + (second % 10), row, pos++, WHITE);
 
+        row++;
+    }
+
+    else if (command[0] == 'c' &&
+             command[1] == 'd' &&
+             command[2] == ' ')
+    {
+        char *name = command + 3;
+
+        if (pfs_cd(name) == 0)
+            print("Directory changed.", row, 0, GREEN);
+        else
+            print("Directory not found.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (equal(command, "pwd"))
+    {
+        print("Current directory: ", row, 0, CYAN);
+        print(pfs_pwd(), row, 18, WHITE);
         row++;
     }
 
