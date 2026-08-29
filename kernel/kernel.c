@@ -23,6 +23,17 @@ extern void kfree(void *);
 extern unsigned int memory_used();
 extern unsigned int memory_free();
 
+extern void process_init();
+extern int process_create(const char *);
+extern int process_kill(int);
+extern void process_tick();
+extern int process_count();
+extern int process_get_pid(int);
+extern const char *process_get_name(int);
+extern const char *process_get_state(int);
+extern void scheduler_tick();
+extern int process_current_pid();
+
 #define VIDEO_MEMORY 0xB8000
 
 #define WHITE 0x07
@@ -199,76 +210,36 @@ void execute_command(char *command)
 
     if (equal(command, "help"))
     {
-        print("Available commands:", row, 0, CYAN);
+        clear_screen();
+        row = 0;
+
+        print("========================================", row, 0, CYAN);
+        row++;
+        print("           SAHALA OS - HELP", row, 0, GREEN);
+        row++;
+        print("========================================", row, 0, CYAN);
         row++;
 
-        print("help     - Show this help", row, 2, WHITE);
-        row++;
-
-        print("about    - About SahalaOS", row, 2, WHITE);
-        row++;
-
-        print("version  - Show OS version", row, 2, WHITE);
-        row++;
-        print("time     - Show system uptime", row, 2, WHITE);
-        row++;
-
-        print("echo     - Print text", row, 2, WHITE);
-        row++;
-
-        print("clear    - Clear screen", row, 2, WHITE);
-        row++;
-        print("reboot   - Restart the OS", row, 2, WHITE);
-        row++;
-
-        print("uname    - Show system information", row, 2, WHITE);
-        row++;
-
-        print("whoami   - Show current user", row, 2, WHITE);
-        row++;
-
-        print("uptime   - Show system uptime", row, 2, WHITE);
-        row++;
-
-        print("mem      - Show memory information", row, 2, WHITE);
-        row++;
-
-        print("cpuinfo  - Show CPU information", row, 2, WHITE);
-        row++;
-
-
-        row++;
-
-        print("ls       - List files", row, 2, WHITE);
-        row++;
-
-        print("mkdir    - Create a file entry", row, 2, WHITE);
-        row++;
-
-        print("write    - Write to a file", row, 2, WHITE);
-        row++;
-
-        print("cat      - Read a file", row, 2, WHITE);
-        row++;
-
-        print("delete   - Delete a file", row, 2, WHITE);
-        row++;
-        print("touch    - Create an empty file", row, 2, WHITE);
-        row++;
-        print("pwd      - Show current directory", row, 2, WHITE);
-        print("cd       - Change directory", row, 2, WHITE); row++;
-        row++;
-        print("cd       - Change directory", row, 2, WHITE);
-        row++;
-
-        print("disktest - Test disk read/write", row, 2, WHITE);
-        row++;
-
-        print("cat      - Read a file", row, 2, WHITE);
-        row++;
-
-        print("rm       - Delete a file", row, 2, WHITE);
-        row++;
+        print("help     - Show this help", row, 0, WHITE); row++;
+        print("about    - About SahalaOS", row, 0, WHITE); row++;
+        print("version  - Show OS version", row, 0, WHITE); row++;
+        print("time     - Show uptime", row, 0, WHITE); row++;
+        print("echo     - Print text", row, 0, WHITE); row++;
+        print("clear    - Clear screen", row, 0, WHITE); row++;
+        print("reboot   - Restart OS", row, 0, WHITE); row++;
+        print("uname    - System information", row, 0, WHITE); row++;
+        print("whoami   - Current user", row, 0, WHITE); row++;
+        print("mem      - Memory information", row, 0, WHITE); row++;
+        print("cpuinfo  - CPU information", row, 0, WHITE); row++;
+        print("ps       - List processes", row, 0, WHITE); row++;
+        print("ls       - List files", row, 0, WHITE); row++;
+        print("mkdir    - Create directory", row, 0, WHITE); row++;
+        print("touch    - Create file", row, 0, WHITE); row++;
+        print("write    - Write file", row, 0, WHITE); row++;
+        print("cat      - Read file", row, 0, WHITE); row++;
+        print("rm       - Delete file", row, 0, WHITE); row++;
+        print("pwd      - Current directory", row, 0, WHITE); row++;
+        print("cd       - Change directory", row, 0, WHITE);
     }
     else if (equal(command, "about"))
     {
@@ -750,6 +721,75 @@ void execute_command(char *command)
         row++;
     }
 
+    else if (command[0] == 'k' &&
+             command[1] == 'i' &&
+             command[2] == 'l' &&
+             command[3] == 'l' &&
+             command[4] == ' ')
+    {
+        char *value = command + 5;
+        int pid = 0;
+        int i = 0;
+
+        while (value[i] >= '0' && value[i] <= '9')
+        {
+            pid = pid * 10 + (value[i] - '0');
+            i++;
+        }
+
+        if (process_kill(pid) == 0)
+            print("Process killed.", row, 0, GREEN);
+        else
+            print("Process not found or protected.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (equal(command, "ps"))
+    {
+        int count = process_count();
+        int i;
+
+        print("PID   NAME        STATE", row, 0, CYAN);
+        row++;
+
+        for (i = 0; i < count; i++)
+        {
+            int pid = process_get_pid(i);
+            const char *name = process_get_name(i);
+            const char *state = process_get_state(i);
+
+            char pid_text[8];
+            int len = 0;
+            unsigned int temp = pid;
+
+            if (temp == 0)
+                pid_text[len++] = '0';
+
+            while (temp > 0 && len < 7)
+            {
+                pid_text[len++] = '0' + (temp % 10);
+                temp /= 10;
+            }
+
+            int pos = 0;
+
+            while (len > 0)
+                put_char(pid_text[--len], row, pos++, WHITE);
+
+            print("   ", row, pos, WHITE);
+            pos += 3;
+
+            print(name, row, pos, WHITE);
+
+            pos += 12;
+
+            print(state, row, pos, GREEN);
+
+            row++;
+        }
+    }
+
     else if (equal(command, "cpuinfo"))
     {
         print("CPU: x86 32-bit", row, 0, GREEN);
@@ -801,6 +841,7 @@ void kernel_main()
     memory_init();
     interrupts_init();
     pfs_init();
+    process_init();
     clear_screen();
 
     print("========================================", 0, 0, CYAN);
@@ -832,12 +873,14 @@ void kernel_main()
 
             length = 0;
 
-            row++;
-
-            if (row >= 24)
+            if (row >= 23)
             {
                 clear_screen();
                 row = 0;
+            }
+            else
+            {
+                row++;
             }
 
             print_prompt();
