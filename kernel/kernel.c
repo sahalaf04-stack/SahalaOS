@@ -140,8 +140,22 @@ char scancode_to_char(unsigned char code)
 
 void print_prompt()
 {
-    print("SahalaOS:~$ ", row, 0, GREEN);
-    col = 12;
+    const char *path = pfs_pwd();
+    int pos = 0;
+
+    print("SahalaOS:", row, 0, GREEN);
+    pos = 9;
+
+    while (path[pos - 9] != '\0' && pos < 30)
+    {
+        put_char(path[pos - 9], row, pos, GREEN);
+        pos++;
+    }
+
+    put_char('$', row, pos, GREEN);
+    put_char(' ', row, pos + 1, GREEN);
+
+    col = pos + 2;
 }
 
 void reboot()
