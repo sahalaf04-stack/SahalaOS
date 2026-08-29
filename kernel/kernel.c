@@ -214,6 +214,24 @@ void execute_command(char *command)
         print("reboot   - Restart the OS", row, 2, WHITE);
         row++;
 
+        print("uname    - Show system information", row, 2, WHITE);
+        row++;
+
+        print("whoami   - Show current user", row, 2, WHITE);
+        row++;
+
+        print("uptime   - Show system uptime", row, 2, WHITE);
+        row++;
+
+        print("mem      - Show memory information", row, 2, WHITE);
+        row++;
+
+        print("cpuinfo  - Show CPU information", row, 2, WHITE);
+        row++;
+
+
+        row++;
+
         print("ls       - List files", row, 2, WHITE);
         row++;
 
@@ -613,6 +631,74 @@ void execute_command(char *command)
             print("Could not create file.", row, 0, RED);
         }
 
+        row++;
+    }
+
+    else if (equal(command, "uname"))
+    {
+        print("SahalaOS", row, 0, GREEN);
+        row++;
+    }
+
+    else if (equal(command, "whoami"))
+    {
+        print("root", row, 0, GREEN);
+        row++;
+    }
+
+    else if (equal(command, "uptime"))
+    {
+        unsigned int seconds = timer_get_ticks() / 100;
+
+        print("Uptime: ", row, 0, CYAN);
+
+        char text[16];
+        int i = 0;
+
+        if (seconds == 0)
+        {
+            print("0 seconds", row, 8, WHITE);
+        }
+        else
+        {
+            while (seconds > 0 && i < 15)
+            {
+                text[i++] = '0' + (seconds % 10);
+                seconds /= 10;
+            }
+
+            int pos = 8;
+
+            while (i > 0)
+                put_char(text[--i], row, pos++, WHITE);
+
+            print(" seconds", row, pos, WHITE);
+        }
+
+        row++;
+    }
+
+    else if (equal(command, "mem"))
+    {
+        print("Memory:", row, 0, CYAN);
+        row++;
+
+        print("Kernel memory manager: basic", row, 2, WHITE);
+        row++;
+
+        print("Heap allocator: not implemented", row, 2, WHITE);
+        row++;
+    }
+
+    else if (equal(command, "cpuinfo"))
+    {
+        print("CPU: x86 32-bit", row, 0, GREEN);
+        row++;
+
+        print("Architecture: i386", row, 0, WHITE);
+        row++;
+
+        print("Mode: Protected Mode", row, 0, WHITE);
         row++;
     }
 
