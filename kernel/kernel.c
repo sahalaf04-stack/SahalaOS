@@ -1,6 +1,21 @@
+extern void pfs_init();
+extern int pfs_create(const char *);
+extern const char *pfs_read(const char *);
+extern int pfs_write(const char *, const char *);
+extern int pfs_delete(const char *);
+extern void pfs_list(void (*)(const char *, int));
+extern int ata_read_sector(unsigned int, unsigned char *);
+extern int ata_write_sector(unsigned int, const unsigned char *);
 extern void timer_init();
 extern void interrupts_init();
 extern void rtc_get_time(unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned short *);
+extern void fs_init();
+extern int fs_delete(const char *);
+extern int fs_create(const char *);
+extern const char *fs_read(const char *);
+extern int fs_write(const char *, const char *);
+extern int fs_delete(const char *);
+extern void fs_list(void (*)(const char *));
 extern void gdt_init();
 extern unsigned int timer_get_ticks();
 #define VIDEO_MEMORY 0xB8000
@@ -149,6 +164,15 @@ void reboot()
     }
 }
 
+void print_file(const char *name, int type)
+{
+    if (type == 2)
+        print(name, row, 2, CYAN);
+    else
+        print(name, row, 2, WHITE);
+    row++;
+}
+
 void execute_command(char *command)
 {
     row++;
@@ -175,6 +199,30 @@ void execute_command(char *command)
         print("clear    - Clear screen", row, 2, WHITE);
         row++;
         print("reboot   - Restart the OS", row, 2, WHITE);
+        row++;
+
+        print("ls       - List files", row, 2, WHITE);
+        row++;
+
+        print("mkdir    - Create a file entry", row, 2, WHITE);
+        row++;
+
+        print("write    - Write to a file", row, 2, WHITE);
+        row++;
+
+        print("cat      - Read a file", row, 2, WHITE);
+        row++;
+
+        print("delete   - Delete a file", row, 2, WHITE);
+        row++;
+
+        print("disktest - Test disk read/write", row, 2, WHITE);
+        row++;
+
+        print("cat      - Read a file", row, 2, WHITE);
+        row++;
+
+        print("rm       - Delete a file", row, 2, WHITE);
         row++;
     }
     else if (equal(command, "about"))
@@ -351,6 +399,157 @@ void execute_command(char *command)
         row++;
     }
 
+    else if (equal(command, "ls"))
+    {
+        print("Files:", row, 0, CYAN);
+        row++;
+
+        pfs_list(print_file);
+    }
+
+    else if (command[0] == 'm' &&
+             command[1] == 'k' &&
+             command[2] == 'd' &&
+             command[3] == 'i' &&
+             command[4] == 'r' &&
+             command[5] == ' ')
+    {
+        char *name = command + 6;
+
+        if (pfs_create_dir(name) == 0)
+            print("Directory created.", row, 0, GREEN);
+        else
+            print("Could not create directory.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (command[0] == 'w' &&
+             command[1] == 'r' &&
+             command[2] == 'i' &&
+             command[3] == 't' &&
+             command[4] == 'e' &&
+             command[5] == ' ')
+    {
+        char *name = command + 6;
+        char *content = name;
+
+        while (*content != '\0' && *content != ' ')
+            content++;
+
+        if (*content == ' ')
+        {
+            *content = '\0';
+            content++;
+
+            if (pfs_write(name, content) == 0)
+                print("File written.", row, 0, GREEN);
+            else
+                print("Write failed.", row, 0, RED);
+        }
+        else
+        {
+            print("Usage: write filename content", row, 0, RED);
+        }
+
+        row++;
+    }
+
+    else if (command[0] == 'c' &&
+             command[1] == 'a' &&
+             command[2] == 't' &&
+             command[3] == ' ')
+    {
+        char *name = command + 4;
+        const char *content = pfs_read(name);
+
+        if (content)
+            print(content, row, 0, WHITE);
+        else
+            print("File not found.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (command[0] == 'r' &&
+             command[1] == 'm' &&
+             command[2] == ' ')
+    {
+        char *name = command + 3;
+
+        if (pfs_delete(name) == 0)
+            print("File deleted.", row, 0, GREEN);
+        else
+            print("File not found.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (command[0] == 'd' &&
+             command[1] == 'e' &&
+             command[2] == 'l' &&
+             command[3] == 'e' &&
+             command[4] == 't' &&
+             command[5] == 'e' &&
+             command[6] == ' ')
+    {
+        char *name = command + 7;
+
+        if (pfs_delete(name) == 0)
+            print("File deleted.", row, 0, GREEN);
+        else
+            print("File not found.", row, 0, RED);
+
+        row++;
+    }
+
+    else if (equal(command, "disktest"))
+    {
+        unsigned char write_buffer[512];
+        unsigned char read_buffer[512];
+        int i;
+        int ok = 1;
+
+        for (i = 0; i < 512; i++)
+            write_buffer[i] = (unsigned char)(i & 0xFF);
+
+        print("Disk test: writing sector...", row, 0, CYAN);
+
+        if (ata_write_sector(10, write_buffer) != 0)
+        {
+            print("Disk write FAILED.", row + 1, 0, RED);
+            row += 2;
+        }
+        else
+        {
+            print("Disk write OK.", row + 1, 0, GREEN);
+
+            if (ata_read_sector(10, read_buffer) != 0)
+            {
+                print("Disk read FAILED.", row + 2, 0, RED);
+                row += 3;
+            }
+            else
+            {
+                for (i = 0; i < 512; i++)
+                {
+                    if (read_buffer[i] != write_buffer[i])
+                    {
+                        ok = 0;
+                        break;
+                    }
+                }
+
+                if (ok)
+                    print("Disk read/write test PASSED.", row + 2, 0, GREEN);
+                else
+                    print("Disk data mismatch.", row + 2, 0, RED);
+
+                row += 3;
+            }
+        }
+    }
+
     else if (equal(command, "reboot"))
     {
         print("Rebooting SahalaOS...", row, 0, RED);
@@ -388,6 +587,7 @@ void kernel_main()
     timer_init();
     gdt_init();
     interrupts_init();
+    pfs_init();
     clear_screen();
 
     print("========================================", 0, 0, CYAN);
