@@ -27,7 +27,6 @@ struct FileSystem
 };
 
 static struct FileSystem fs;
-
 static char current_directory[64] = "/";
 
 extern int ata_read_sector(unsigned int lba, unsigned char *buffer);
@@ -153,6 +152,7 @@ static int fs_load()
 void pfs_init()
 {
     fs_load();
+
     current_directory[0] = '/';
     current_directory[1] = '\0';
 }
@@ -178,6 +178,9 @@ static int find_file(const char *name, int type)
 int pfs_create_file(const char *name)
 {
     int i;
+
+    if (name[0] == '\0')
+        return -1;
 
     if (find_file(name, TYPE_FILE) >= 0 ||
         find_file(name, TYPE_DIR) >= 0)
@@ -205,6 +208,9 @@ int pfs_create_file(const char *name)
 int pfs_create_dir(const char *name)
 {
     int i;
+
+    if (name[0] == '\0')
+        return -1;
 
     if (find_file(name, TYPE_FILE) >= 0 ||
         find_file(name, TYPE_DIR) >= 0)
@@ -300,9 +306,9 @@ const char *pfs_pwd()
 int pfs_cd(const char *name)
 {
     int i;
-    char new_path[64];
     int len;
     int j;
+    char new_path[64];
 
     if (str_equal(name, "/"))
     {
@@ -310,6 +316,9 @@ int pfs_cd(const char *name)
         current_directory[1] = '\0';
         return 0;
     }
+
+    if (str_equal(name, "."))
+        return 0;
 
     if (str_equal(name, ".."))
     {
@@ -326,7 +335,7 @@ int pfs_cd(const char *name)
         while (len > 0 && current_directory[len] != '/')
             len--;
 
-        if (len == 0)
+        if (len <= 0)
         {
             current_directory[0] = '/';
             current_directory[1] = '\0';
@@ -352,22 +361,14 @@ int pfs_cd(const char *name)
                 len++;
 
             if (len == 1 && current_directory[0] == '/')
-            {
-                new_path[0] = '/';
-                len = 1;
-            }
-            else
-            {
                 new_path[len++] = '/';
-            }
+            else
+                new_path[len++] = '/';
 
             j = 0;
 
-            while (name[j] != '\0' &&
-                   len < 63)
-            {
+            while (name[j] != '\0' && len < 63)
                 new_path[len++] = name[j++];
-            }
 
             new_path[len] = '\0';
 
