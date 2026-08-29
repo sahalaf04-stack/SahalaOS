@@ -1,5 +1,7 @@
 *.o
 *.elf
 *.iso
-SahalaOS.img
-SahalaOS.img
+*.img
+*.bin
+qemu.log
+__pycache__/

@@ -1,0 +1,7 @@
+#ifndef ATA_H
+#define ATA_H
+
+int ata_read_sector(unsigned int lba, unsigned char *buffer);
+int ata_write_sector(unsigned int lba, const unsigned char *buffer);
+
+#endif

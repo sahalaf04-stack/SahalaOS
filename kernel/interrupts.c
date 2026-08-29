@@ -1,3 +1,5 @@
+#include "../include/interrupts.h"
+
 #define IDT_ENTRIES 256
 
 struct IDTEntry

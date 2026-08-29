@@ -1,3 +1,5 @@
+#include "../include/filesystem.h"
+
 #define MAX_FILES 16
 #define MAX_FILENAME 32
 #define MAX_CONTENT 256

@@ -1,5 +1,3 @@
-#include "../include/memory.h"
-
 #define HEAP_SIZE 65536
 
 static unsigned char heap[HEAP_SIZE];

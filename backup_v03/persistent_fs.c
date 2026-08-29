@@ -1,6 +1,3 @@
-#include "../include/persistent_fs.h"
-#include "../include/ata.h"
-
 #define FS_MAGIC 0x534F5346
 #define FS_VERSION 3
 

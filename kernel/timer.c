@@ -1,3 +1,5 @@
+#include "../include/timer.h"
+
 volatile unsigned int timer_ticks = 0;
 
 void timer_init()
