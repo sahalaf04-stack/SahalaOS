@@ -208,6 +208,37 @@ void execute_command(char *command)
 {
     row++;
 
+
+    if (equal(command, "help"))
+    {
+        print("Available commands:", row, 0, CYAN);
+        row++;
+
+        print("help     - Show help", row, 2, WHITE); row++;
+        print("about    - About SahalaOS", row, 2, WHITE); row++;
+        print("version  - Show OS version", row, 2, WHITE); row++;
+        print("time     - Show uptime", row, 2, WHITE); row++;
+        print("echo     - Print text", row, 2, WHITE); row++;
+        print("clear    - Clear screen", row, 2, WHITE); row++;
+        print("reboot   - Restart OS", row, 2, WHITE); row++;
+        print("uname    - System information", row, 2, WHITE); row++;
+        print("whoami   - Current user", row, 2, WHITE); row++;
+        print("uptime   - System uptime", row, 2, WHITE); row++;
+        print("mem      - Memory information", row, 2, WHITE); row++;
+        print("cpuinfo  - CPU information", row, 2, WHITE); row++;
+        print("ps       - List processes", row, 2, WHITE); row++;
+        print("ls       - List files", row, 2, WHITE); row++;
+        print("mkdir    - Create directory", row, 2, WHITE); row++;
+        print("touch    - Create file", row, 2, WHITE); row++;
+        print("write    - Write file", row, 2, WHITE); row++;
+        print("cat      - Read file", row, 2, WHITE); row++;
+        print("rm       - Delete file", row, 2, WHITE); row++;
+        print("pwd      - Current directory", row, 2, WHITE); row++;
+        print("cd       - Change directory", row, 2, WHITE); row++;
+        print("disktest - Test disk", row, 2, WHITE); row++;
+    }
+    else
+
     if (equal(command, "help"))
     {
         clear_screen();
