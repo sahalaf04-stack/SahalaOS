@@ -1,20 +1,18 @@
 bits 32
 
-global irq1_handler
-global keyboard_scancode
+global irq0_handler
+global irq0_count
 
 section .data
 
-keyboard_scancode db 0
+irq0_count dd 0
 
 section .text
 
-irq1_handler:
+irq0_handler:
     pusha
 
-    in al, 0x60
-
-    mov [keyboard_scancode], al
+    inc dword [irq0_count]
 
     mov al, 0x20
     out 0x20, al

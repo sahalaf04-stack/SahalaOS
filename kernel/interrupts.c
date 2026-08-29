@@ -15,10 +15,10 @@ struct IDTPointer
     unsigned int base;
 } __attribute__((packed));
 
-struct IDTEntry idt[IDT_ENTRIES];
-struct IDTPointer idt_pointer;
+static struct IDTEntry idt[IDT_ENTRIES];
+static struct IDTPointer idt_pointer;
 
-extern void irq1_handler();
+extern void irq0_handler();
 
 static inline void outb(unsigned short port, unsigned char value)
 {
@@ -48,13 +48,35 @@ void interrupts_init()
     idt_pointer.limit = sizeof(idt) - 1;
     idt_pointer.base = (unsigned int)&idt;
 
+    /*
+     * Clear IDT.
+     */
     for (int i = 0; i < IDT_ENTRIES; i++)
     {
         idt_set_gate(i, 0, 0, 0);
     }
 
     /*
-     * Remap PIC.
+     * IRQ0 -> interrupt 32.
+     */
+    idt_set_gate(
+        32,
+        (unsigned int)irq0_handler,
+        0x08,
+        0x8E
+    );
+
+    /*
+     * Load IDT.
+     */
+    __asm__ volatile (
+        "lidt %0"
+        :
+        : "m"(idt_pointer)
+    );
+
+    /*
+     * Remap master/slave PIC.
      */
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
@@ -69,28 +91,15 @@ void interrupts_init()
     outb(0xA1, 0x01);
 
     /*
-     * Keyboard IRQ1 -> interrupt 33.
+     * Enable only IRQ0.
+     *
+     * Bit 0 = 0 -> IRQ0 enabled
+     * Other IRQs masked.
      */
-    idt_set_gate(
-        33,
-        (unsigned int)irq1_handler,
-        0x08,
-        0x8E
-    );
-
-    __asm__ volatile (
-        "lidt (%0)"
-        :
-        : "r"(&idt_pointer)
-    );
+    outb(0x21, 0xFE);
 
     /*
-     * Enable IRQ1.
-     */
-    outb(0x21, 0xFD);
-
-    /*
-     * Disable slave PIC.
+     * Mask all slave IRQs.
      */
     outb(0xA1, 0xFF);
 

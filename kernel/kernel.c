@@ -5,6 +5,7 @@
 #define CYAN  0x0B
 #define RED   0x0C
 
+
 static int row = 5;
 static int col = 0;
 
@@ -159,6 +160,8 @@ void execute_command(char *command)
         row++;
 
         print("version  - Show OS version", row, 2, WHITE);
+        row++;
+        print("time     - Show system uptime", row, 2, WHITE);
         row++;
 
         print("echo     - Print text", row, 2, WHITE);

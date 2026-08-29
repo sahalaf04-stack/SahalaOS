@@ -7,15 +7,19 @@ dd 0
 dd -(0x1BADB002)
 
 section .text
+
 global _start
 extern kernel_main
 
 _start:
     cli
+
     mov esp, 0x90000
+    and esp, 0xFFFFFFF0
 
     call kernel_main
 
 hang:
+    cli
     hlt
     jmp hang
