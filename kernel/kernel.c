@@ -14,12 +14,6 @@ extern void timer_init();
 extern void interrupts_init();
 extern void rtc_get_time(unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned short *);
 extern void fs_init();
-extern int fs_delete(const char *);
-extern int fs_create(const char *);
-extern const char *fs_read(const char *);
-extern int fs_write(const char *, const char *);
-extern int fs_delete(const char *);
-extern void fs_list(void (*)(const char *));
 extern void gdt_init();
 extern unsigned int timer_get_ticks();
 #define VIDEO_MEMORY 0xB8000
@@ -188,6 +182,7 @@ void print_file(const char *name, int type)
         print(name, row, 2, CYAN);
     else
         print(name, row, 2, WHITE);
+
     row++;
 }
 
