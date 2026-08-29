@@ -1,3 +1,8 @@
+extern void timer_init();
+extern void interrupts_init();
+extern void rtc_get_time(unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned short *);
+extern void gdt_init();
+extern unsigned int timer_get_ticks();
 #define VIDEO_MEMORY 0xB8000
 
 #define WHITE 0x07
@@ -194,6 +199,90 @@ void execute_command(char *command)
     {
         print(command + 5, row, 0, WHITE);
     }
+    else if (equal(command, "time"))
+    {
+        unsigned int seconds = timer_get_ticks() / 100;
+        char text[16];
+        int i = 0;
+
+        print("SahalaOS uptime: ", row, 0, CYAN);
+
+        if (seconds == 0)
+        {
+            put_char('0', row, 17, WHITE);
+            put_char('s', row, 18, WHITE);
+        }
+        else
+        {
+            while (seconds > 0)
+            {
+                text[i++] = '0' + (seconds % 10);
+                seconds /= 10;
+            }
+
+            int pos = 17;
+
+            while (i > 0)
+            {
+                put_char(text[--i], row, pos++, WHITE);
+            }
+
+            put_char('s', row, pos, WHITE);
+        }
+
+        row++;
+    }
+
+    else if (equal(command, "rtc"))
+    {
+        unsigned char second, minute, hour;
+        unsigned char day, month;
+        unsigned short year;
+
+        rtc_get_time(
+            &second,
+            &minute,
+            &hour,
+            &day,
+            &month,
+            &year
+        );
+
+        print("RTC: ", row, 0, CYAN);
+
+        int pos = 5;
+
+        /* HH:MM:SS */
+        put_char('0' + (hour / 10), row, pos++, WHITE);
+        put_char('0' + (hour % 10), row, pos++, WHITE);
+        put_char(':', row, pos++, WHITE);
+
+        put_char('0' + (minute / 10), row, pos++, WHITE);
+        put_char('0' + (minute % 10), row, pos++, WHITE);
+        put_char(':', row, pos++, WHITE);
+
+        put_char('0' + (second / 10), row, pos++, WHITE);
+        put_char('0' + (second % 10), row, pos++, WHITE);
+
+        pos += 2;
+
+        /* DD/MM/YYYY */
+        put_char('0' + (day / 10), row, pos++, WHITE);
+        put_char('0' + (day % 10), row, pos++, WHITE);
+        put_char('/', row, pos++, WHITE);
+
+        put_char('0' + (month / 10), row, pos++, WHITE);
+        put_char('0' + (month % 10), row, pos++, WHITE);
+        put_char('/', row, pos++, WHITE);
+
+        put_char('0' + ((year / 1000) % 10), row, pos++, WHITE);
+        put_char('0' + ((year / 100) % 10), row, pos++, WHITE);
+        put_char('0' + ((year / 10) % 10), row, pos++, WHITE);
+        put_char('0' + (year % 10), row, pos++, WHITE);
+
+        row++;
+    }
+
     else if (equal(command, "reboot"))
     {
         print("Rebooting SahalaOS...", row, 0, RED);
@@ -228,6 +317,9 @@ void kernel_main()
     char command[64];
     int length = 0;
 
+    timer_init();
+    gdt_init();
+    interrupts_init();
     clear_screen();
 
     print("========================================", 0, 0, CYAN);

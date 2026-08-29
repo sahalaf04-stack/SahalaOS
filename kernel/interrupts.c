@@ -29,54 +29,39 @@ static inline void outb(unsigned short port, unsigned char value)
     );
 }
 
-void idt_set_gate(
-    int number,
-    unsigned int base,
-    unsigned short selector,
-    unsigned char flags
-)
+void idt_set_gate(int number, unsigned int base)
 {
     idt[number].offset_low = base & 0xFFFF;
-    idt[number].selector = selector;
+    idt[number].selector = 0x08;
     idt[number].zero = 0;
-    idt[number].type_attr = flags;
+    idt[number].type_attr = 0x8E;
     idt[number].offset_high = (base >> 16) & 0xFFFF;
 }
 
 void interrupts_init()
 {
-    idt_pointer.limit = sizeof(idt) - 1;
-    idt_pointer.base = (unsigned int)&idt;
-
     /*
      * Clear IDT.
      */
     for (int i = 0; i < IDT_ENTRIES; i++)
     {
-        idt_set_gate(i, 0, 0, 0);
+        idt[i].offset_low = 0;
+        idt[i].selector = 0;
+        idt[i].zero = 0;
+        idt[i].type_attr = 0;
+        idt[i].offset_high = 0;
     }
 
     /*
-     * IRQ0 -> interrupt 32.
+     * IRQ0 = interrupt 32.
      */
-    idt_set_gate(
-        32,
-        (unsigned int)irq0_handler,
-        0x08,
-        0x8E
-    );
+    idt_set_gate(32, (unsigned int)irq0_handler);
+
+    idt_pointer.limit = sizeof(idt) - 1;
+    idt_pointer.base = (unsigned int)&idt;
 
     /*
-     * Load IDT.
-     */
-    __asm__ volatile (
-        "lidt %0"
-        :
-        : "m"(idt_pointer)
-    );
-
-    /*
-     * Remap master/slave PIC.
+     * Remap PIC.
      */
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
@@ -91,20 +76,18 @@ void interrupts_init()
     outb(0xA1, 0x01);
 
     /*
-     * Enable only IRQ0.
-     *
-     * Bit 0 = 0 -> IRQ0 enabled
-     * Other IRQs masked.
+     * Disable all IRQs except IRQ0.
      */
     outb(0x21, 0xFE);
-
-    /*
-     * Mask all slave IRQs.
-     */
     outb(0xA1, 0xFF);
 
     /*
-     * Enable CPU interrupts.
+     * Load IDT.
+     */
+    __asm__ volatile ("lidt %0" : : "m"(idt_pointer));
+
+    /*
+     * Enable interrupts.
      */
     __asm__ volatile ("sti");
 }
